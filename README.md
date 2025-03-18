@@ -25,8 +25,8 @@
 |----------------|----------------|
 | **React.js** | **Node.js** |
 | **CSS3 & Animations** | **Express.js** |
-| **TailwindCSS / Bootstrap** | **MongoDB / PostgreSQL** |
-| **Axios / Fetch API** | **JWT Authentication** |
+| **TailwindCSS** | **MongoDB** |
+| **Axios** | **JWT Authentication** |
 
 ---
 
