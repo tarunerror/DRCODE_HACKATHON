@@ -3,14 +3,15 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const vader = require("vader-sentiment");
-const sendEmail = require("./utils/sendEmail"); // Import email function
+const sendEmail = require("./utils/sendEmail");
+const admin = require("./firebaseConfig"); // Firebase Admin SDK
 require("dotenv").config();
 
 const app = express();
 const port = 5000;
 
 app.use(bodyParser.json());
-app.use(cors()); // Allow frontend to access backend
+app.use(cors());
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -26,13 +27,28 @@ const emailSchema = new mongoose.Schema({
   emailText: String,
   email: String,
   sentimentScore: Number,
-  customMessage: String, // New field for personalized messages
+  customMessage: String,
   createdAt: { type: Date, default: Date.now },
 });
 const Email = mongoose.model("Email", emailSchema);
 
-// Endpoint to receive email text, analyze sentiment, and store it
-app.post("/analyze", async (req, res) => {
+// Middleware to Verify Firebase Authentication
+const verifyToken = async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1]; // Extract token from Bearer header
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken; // Attach user details to request
+    next();
+  } catch (error) {
+    console.error("Firebase Auth Error:", error);
+    return res.status(401).json({ error: "Invalid Token" });
+  }
+};
+
+// Analyze Sentiment & Store in Database (Protected Route)
+app.post("/analyze", verifyToken, async (req, res) => {
   try {
     const { emailText, email, customMessage } = req.body;
     if (!emailText || !email) {
@@ -60,8 +76,8 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-// Endpoint to get all analyzed emails
-app.get("/emails", async (req, res) => {
+// Get All Analyzed Emails (Protected Route)
+app.get("/emails", verifyToken, async (req, res) => {
   try {
     const emails = await Email.find().sort({ createdAt: -1 });
     res.json(emails);
